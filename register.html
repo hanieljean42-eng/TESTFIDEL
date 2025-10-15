@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Créer un compte – Test de Fidélité</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#0f172a;color:#e2e8f0}
+    .wrap{max-width:480px;margin:0 auto;padding:24px}
+    header{padding:24px 0}
+    input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1f2937;background:#0b1220;color:#e2e8f0;margin:6px 0}
+    button.btn{padding:10px 14px;border-radius:10px;border:1px solid #0ea5e9;background:#0ea5e9;color:#fff;cursor:pointer}
+    .card{background:#0b1220;padding:18px;border:1px solid #1f2937;border-radius:14px}
+    a{color:#93c5fd}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Créer un compte</h1>
+    </header>
+    <div class="card">
+      <form id="f">
+        <label>Nom</label>
+        <input type="text" id="name" required />
+        <label>Email</label>
+        <input type="email" id="email" required />
+        <label>Mot de passe</label>
+        <input type="password" id="password" required />
+        <button class="btn" type="submit">S'inscrire</button>
+      </form>
+      <p>Déjà inscrit ? <a href="/login">Se connecter</a></p>
+    </div>
+  </div>
+  <script>
+    const f = document.getElementById('f');
+    f.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      try{
+        const res = await fetch('/api/register', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, email, password })});
+        const j = await res.json();
+        if(!res.ok) throw new Error(j.error||'Erreur');
+        location.href = '/test';
+      }catch(err){ alert('Inscription échouée'); }
+    });
+  </script>
+</body>
+</html>

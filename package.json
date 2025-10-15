@@ -1,0 +1,20 @@
+{
+  "name": "fidelite-test",
+  "version": "1.0.0",
+  "description": "Site de test de fidélité avec authentification, stockage des résultats et tableau admin (créateur: Haniel Djeble)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "migrate": "node src/db.js --migrate"
+  },
+  "author": "Haniel Djeble",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "express-session": "^1.17.3",
+    "sqlite3": "^5.1.7",
+    "nodemailer": "^6.9.13"
+  }
+}

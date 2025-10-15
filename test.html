@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Passer le test – Test de Fidélité</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#0f172a;color:#e2e8f0}
+    .wrap{max-width:860px;margin:0 auto;padding:24px}
+    header{padding:24px 0;display:flex;justify-content:space-between;align-items:center}
+    .card{background:#0b1220;padding:18px;border:1px solid #1f2937;border-radius:14px}
+    .q{padding:12px 10px;border-bottom:1px solid #1f2937}
+    .row{display:flex;gap:10px;align-items:center}
+    select{padding:8px 10px;border-radius:10px;border:1px solid #1f2937;background:#0b1220;color:#e2e8f0}
+    button.btn{padding:10px 14px;border-radius:10px;border:1px solid #0ea5e9;background:#0ea5e9;color:#fff;cursor:pointer}
+    a{color:#93c5fd}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Passer le test</h1>
+      <nav>
+        <a href="/" style="color:#93c5fd">Accueil</a>
+        <span> | </span>
+        <a href="/admin" style="color:#93c5fd">Admin</a>
+        <span> | </span>
+        <a href="#" id="logout" style="color:#93c5fd">Se déconnecter</a>
+      </nav>
+    </header>
+
+    <div class="card" id="zone">
+      <form id="f"></form>
+      <p id="result" style="display:none"></p>
+    </div>
+  </div>
+
+  <script>
+    async function api(path, opts){ const r = await fetch(path, opts||{}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+    async function load(){
+      try{
+        const me = await api('/api/me'); if(!me.user){ location.href='/login'; return; }
+        const data = await api('/api/test');
+        const f = document.getElementById('f');
+        f.innerHTML = '';
+        data.questions.forEach(q=>{
+          const div = document.createElement('div'); div.className = 'q';
+          div.innerHTML = `<div class="row"><strong>${q.text}</strong><span style="margin-left:auto"></span></div>`;
+          const sel = document.createElement('select'); sel.name = 'q_'+q.id;
+          for(let i=1;i<=q.scale;i++){ const opt = document.createElement('option'); opt.value=i; opt.textContent=i; sel.appendChild(opt); }
+          div.appendChild(sel);
+          f.appendChild(div);
+        });
+        const btn = document.createElement('button'); btn.className='btn'; btn.type='submit'; btn.textContent='Envoyer mes réponses'; f.appendChild(btn);
+        f.addEventListener('submit', async (e)=>{
+          e.preventDefault();
+          const answers = data.questions.map(q=>({ id:q.id, value: Number(f.querySelector(`[name="q_${q.id}"]`).value) }));
+          const res = await api('/api/test', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ answers }) });
+          document.getElementById('result').style.display='block';
+          document.getElementById('result').textContent = 'Score total: '+res.score+' / '+(data.questions.length*5);
+        });
+      }catch(err){ alert('Erreur de chargement. Veuillez vous reconnecter.'); location.href='/login'; }
+    }
+    document.getElementById('logout').addEventListener('click', async (e)=>{ e.preventDefault(); await fetch('/api/logout', {method:'POST'}); location.href='/'; });
+    load();
+  </script>
+</body>
+</html>

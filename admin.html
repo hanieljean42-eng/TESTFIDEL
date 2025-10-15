@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin – Test de Fidélité</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#0f172a;color:#e2e8f0}
+    .wrap{max-width:1000px;margin:0 auto;padding:24px}
+    header{padding:24px 0;display:flex;justify-content:space-between;align-items:center}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #1f2937;padding:10px;text-align:left}
+    .card{background:#0b1220;padding:18px;border:1px solid #1f2937;border-radius:14px;overflow:auto}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1e293b;border:1px solid #334155}
+    a{color:#93c5fd}
+    input, textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1f2937;background:#0b1220;color:#e2e8f0;margin:6px 0}
+    button.btn{padding:10px 14px;border-radius:10px;border:1px solid #0ea5e9;background:#0ea5e9;color:#fff;cursor:pointer}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .col{flex:1;min-width:200px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Tableau de bord Admin</h1>
+      <nav>
+        <a href="/test" style="color:#93c5fd">Aller au test</a>
+        <span> | </span>
+        <a href="#" id="logout" style="color:#93c5fd">Se déconnecter</a>
+      </nav>
+    </header>
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="margin-top:0">Résultats</h3>
+      <div class="row">
+        <div class="col">
+          <label>Du</label>
+          <input type="date" id="from" />
+        </div>
+        <div class="col">
+          <label>Au</label>
+          <input type="date" id="to" />
+        </div>
+        <div class="col" style="align-self:end">
+          <button id="filterBtn" class="btn">Filtrer</button>
+          <button id="exportBtn" class="btn">Exporter CSV</button>
+        </div>
+      </div>
+      <table id="t">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Utilisateur</th>
+            <th>Email</th>
+            <th>Score</th>
+            <th>Réponses</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Questions du test</h3>
+      <div id="qList"></div>
+      <div style="margin-top:10px">
+        <button id="addQ" class="btn">Ajouter une question</button>
+        <button id="saveQ" class="btn">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function api(path, opts){ const r = await fetch(path, opts||{}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+    function rowQ(q){
+      const wrap = document.createElement('div');
+      wrap.style.borderTop = '1px solid #1f2937'; wrap.style.padding='10px 0';
+      wrap.innerHTML = `
+        <label>Intitulé</label>
+        <textarea class="q-text">${q.text||''}</textarea>
+        <div class="row">
+          <div class="col">
+            <label>Échelle (2-10)</label>
+            <input type="number" class="q-scale" min="2" max="10" value="${q.scale||5}" />
+          </div>
+          <div class="col">
+            <label>ID</label>
+            <input type="number" class="q-id" value="${q.id||''}" />
+          </div>
+        </div>`;
+      return wrap;
+    }
+    async function load(){
+      try{
+        const me = await api('/api/me');
+        if(!me.user) { location.href='/login'; return; }
+        if(!me.user.is_admin) { alert('Accès réservé au créateur'); location.href='/test'; return; }
+        const data = await api('/api/admin/results');
+        const tb = document.querySelector('#t tbody'); tb.innerHTML='';
+        data.forEach(r=>{
+          const tr = document.createElement('tr');
+          const ans = (r.answers||[]).map(a=>`q${a.id}:${a.value}`).join(', ');
+          tr.innerHTML = `<td>${r.id}</td><td>${r.name}</td><td>${r.email}</td><td><span class="pill">${r.score}</span></td><td>${ans}</td><td>${new Date(r.created_at).toLocaleString()}</td>`;
+          tb.appendChild(tr);
+        });
+
+        // load questions
+        const qres = await api('/api/admin/questions');
+        const list = document.getElementById('qList'); list.innerHTML='';
+        (qres.questions||[]).forEach(q=> list.appendChild(rowQ(q)));
+      }catch(e){ alert('Erreur ou non autorisé'); location.href='/login'; }
+    }
+    document.getElementById('logout').addEventListener('click', async (e)=>{ e.preventDefault(); await fetch('/api/logout', {method:'POST'}); location.href='/'; });
+    document.getElementById('filterBtn').addEventListener('click', async ()=>{
+      try{
+        const from = document.getElementById('from').value; const to = document.getElementById('to').value;
+        const qs = new URLSearchParams(); if(from) qs.set('from', from); if(to) qs.set('to', to);
+        const res = await api('/api/admin/results?'+qs.toString());
+        const tb = document.querySelector('#t tbody'); tb.innerHTML='';
+        res.forEach(r=>{
+          const tr = document.createElement('tr');
+          const ans = (r.answers||[]).map(a=>`q${a.id}:${a.value}`).join(', ');
+          tr.innerHTML = `<td>${r.id}</td><td>${r.name}</td><td>${r.email}</td><td><span class=\"pill\">${r.score}</span></td><td>${ans}</td><td>${new Date(r.created_at).toLocaleString()}</td>`;
+          tb.appendChild(tr);
+        });
+      }catch{ alert('Filtre indisponible'); }
+    });
+    document.getElementById('exportBtn').addEventListener('click', ()=>{
+      const from = document.getElementById('from').value; const to = document.getElementById('to').value;
+      const qs = new URLSearchParams(); if(from) qs.set('from', from); if(to) qs.set('to', to); qs.set('csv','1');
+      location.href = '/api/admin/results?'+qs.toString();
+    });
+    document.getElementById('addQ').addEventListener('click', ()=>{
+      document.getElementById('qList').appendChild(rowQ({ text:'Nouvelle question', scale:5 }));
+    });
+    document.getElementById('saveQ').addEventListener('click', async ()=>{
+      const items = Array.from(document.querySelectorAll('#qList > div')).map(div=>({
+        id: Number(div.querySelector('.q-id').value||0),
+        text: div.querySelector('.q-text').value.trim(),
+        scale: Number(div.querySelector('.q-scale').value||5)
+      })).filter(q=>q.text);
+      if(!items.length) return alert('Aucune question');
+      try{
+        await api('/api/admin/questions',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ questions: items })});
+        alert('Questions enregistrées');
+      }catch{ alert('Échec enregistrement'); }
+    });
+    load();
+  </script>
+</body>
+</html>
